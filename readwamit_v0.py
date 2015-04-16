@@ -15,6 +15,7 @@ import re
 import mmap
 import linecache
 import numpy as np
+import matplotlib.pyplot as plt
 
 # >>WAMIT file name
 wamOUT = './files/opt_x.out'
@@ -182,16 +183,15 @@ for i in range(nmodes):
 # > Once the most important parameters from the *.out file are mapped, the dependency of added mass and damping to wave periods can be easily analyzed.
 # * Get added mass and damping of a given mode of a given body across wave periods
 
-# In[17]:
-
 AdddedMassHeave = []
 DampingHeave = []
+outmode = ['3','3']
 
 # get a specific mode for all wave periods
 for i in range(len(waveT)):
     for j in range(nmodes):
     
-        if dat_IJ_AB[i][j].split()[0:2] == ['3','3']:
+        if dat_IJ_AB[i][j].split()[0:2] == outmode:
             AdddedMassHeave.append( dat_IJ_AB[i][j].split()[-2] )
             DampingHeave.append( dat_IJ_AB[i][j].split()[-1] )
 
@@ -200,19 +200,20 @@ for i in range(len(waveT)):
 
 # In[18]:
 
-get_ipython().magic(u'pylab inline')
+#get_ipython().magic(u'pylab inline')
 
-figure()
+plt.figure()
 plt.plot(waveT, AdddedMassHeave)
-xlabel('wave period (s)')
-title('Non-dimensional added mass coefficients')
-show()
+plt.xlabel('wave period (s)')
+plt.title('Non-dimensional added mass coefficients')
+plt.show()
 
-figure()
+plt.figure()
 plt.plot(waveT, DampingHeave)
-xlabel('wave period (s)')
-title('Non-dimensional damping coefficients')
-show()
+plt.xlabel('wave period (s)')
+plt.title('Non-dimensional damping coefficients')
+plt.show()
+
 # TODO:
 # iii) define which modes correspond to which bodies
 # (!) this is not so trivial because for each body, different number of modes can be outputted
