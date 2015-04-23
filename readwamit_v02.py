@@ -16,23 +16,35 @@ import matplotlib.pyplot as plt
 
 class readWamit(object):
     ''' Class to read a WAMIT output file '''
-
-    wamOUT = [] # >>WAMIT file name        
-    waveT = np.array([])  # wave period in units of time
-    nmodes = 0
     
     def __init__(self):
+        ''' set up instance attributes/variables/names, it will make it easier '''
         self.AddedMass = []
         self.Damping = []
         self.dat_IJ_AB = [] # rigid-body mode (I, J), added mass (A) and damping (B)
+        self.wamOUT = [] # >>WAMIT file name        
+        self.waveT = []  # wave period in units of time
+        self.nmodes = []      
+        self.gravity = []
+        self.length_scale = []
+        self.HydroRes = []    # create empty list
+        self.volumesXYZ = []
    
-    def ReadOutFile(self, wamOUT):	 
+    def ReadOutFile(self, *args):	 
         ''' here describe this method ... '''
         
         waveT = self.waveT
         nmodes = self.nmodes        
         dat_IJ_AB = self.dat_IJ_AB
+        gravity = self.gravity
+        length_scale =  self.length_scale
+        HydroRes = self.HydroRes
+        volumesXYZ = self.volumesXYZ
         
+        if args:
+            wamOUT = args[0]
+        else:
+            wamOUT = self.wamOUT
         # Define rules to look up for landmarks in the file and load data for visualization.
         # These rules should make the structure of the script flexible and general,
         # considering that the structure of the output file for a specific code is
@@ -66,19 +78,17 @@ class readWamit(object):
         
         # >> lists
         flgHR2 = []
-        gravity = []
-        length_scale = []
+        
         water_depth = []
 
-        volumesXYZ = []
         center_bouyancy = []
-        hydrostatic_restoring = []
         center_gravity= []
+        dat_HS_Res = []
         
         ixwp = []    # line index for 'Wave period (sec) =' line
         charnum = []  # character number
     
-        Ldat_C = []    # create empty list     
+             
 
         kL_number = []  # wave number           
         
@@ -140,7 +150,7 @@ class readWamit(object):
         theseLs = linecache.getlines(wamOUT) # these are the lines in the file and can be accessed randomly
         
         for i in range(2):    # populate list with arrays
-            Ldat_C.append( np.zeros((6, 6), dtype=np.float) )
+            HydroRes.append( np.zeros((6, 6), dtype=np.float) )
         
         # index for filling up C matrices
         iixC3 = range(2,5)
@@ -148,7 +158,7 @@ class readWamit(object):
         
         # use flgHR2 to store hydrostatic restoring coefficients
         for i in flgHR2:
-            hydrostatic_restoring.append(theseLs[i:i + law5])
+            dat_HS_Res.append(theseLs[i:i + law5])
         
         # use nbodies
         for i in range(nbodies):    # loop for each body
@@ -157,21 +167,21 @@ class readWamit(object):
                 
                     try:                 
                         # check if string is ' C(3,3),C(3,4),C(3,5): '
-                        if hydrostatic_restoring[i][j].split()[0] == hydrostatic_restoring[0][0].split()[0]:
+                        if dat_HS_Res[i][j].split()[0] == dat_HS_Res[0][0].split()[0]:
                         
-                            Ldat_C[i][j + 2, iixC3[k]] = np.float(hydrostatic_restoring[i][j].split()[k])
+                            HydroRes[i][j + 2, iixC3[k]] = np.float(dat_HS_Res[i][j].split()[k])
                             
                         else:
                             
-                            Ldat_C[i][j + 2, iixC4[k]] = np.float(hydrostatic_restoring[i][j].split()[k])
+                            HydroRes[i][j + 2, iixC4[k]] = np.float(dat_HS_Res[i][j].split()[k])
                     
                     except ValueError:
-                        print 'There is a string in hydrostatic_restoring[i][j].split()[k]'
-                        print hydrostatic_restoring[i][j].split()[k], '--- (!) WAMIT index'
+                        print 'There is a string in dat_HS_Res[i][j].split()[k]'
+                        print dat_HS_Res[i][j].split()[k], '--- (!) WAMIT index'
                         print 'For body ',i + 1, ', C(', j+2, ',', iixC4[k],') will be kept to zero --- (!) Python index\n'
                         
-        for i in range(len(Ldat_C)):
-            print 'Hydrostatic restoring coefficients of body ', i + 1, ':\n', Ldat_C[i][:]
+        for i in range(len(HydroRes)):
+            print 'Hydrostatic restoring coefficients of body ', i + 1, ':\n', HydroRes[i][:]
           
         for i in Aixwp:
         
@@ -197,11 +207,25 @@ class readWamit(object):
         
         # > Once the most important parameters from the *.out file are mapped, the dependency of added mass and damping to wave periods can be easily analyzed.
         # * Get added mass and damping of a given mode of a given body across wave periods
+        
+        self.waveT = waveT
+        self.nmodes = nmodes
+        self.dat_IJ_AB = dat_IJ_AB
+        self.gravity = gravity
+        
         return waveT, nmodes, dat_IJ_AB
     
-    def ReadMode(self, outmode, waveT, nmodes, dat_IJ_AB):
+    def ReadMode(self, outmode, *args):
         # get a specific mode for all wave periods
-        
+        if args:
+            waveT = args[0]
+            nmodes= args[1]
+            dat_IJ_AB = args[2]
+        else:
+            waveT = self.waveT
+            nmodes= self.nmodes
+            dat_IJ_AB = self.dat_IJ_AB
+            
         # setup/init
         AddedMass =  self.AddedMass
         Damping = self.Damping
@@ -214,30 +238,86 @@ class readWamit(object):
                     AddedMass.append( dat_IJ_AB[i][j].split()[-2] )
                     Damping.append( dat_IJ_AB[i][j].split()[-1] )
         
-        return AddedMass, Damping
+        return AddedMass, Damping   # why is this passing to "self" ??
 
-# > * Plot coefficients versus wave period
+    def Dim0(self, rho, ulen):
+        ''' 
+        dimensionalize added mass or damping from WAMIT output to physical units,
+        rho units most match those of self.gravity and length scale should be 
+        equal to 1        
+        '''    
+        return [float(i)*rho for i in self.AddedMass],  [float(i)*rho for i in self.Damping]
+                
+    def Dim1(self, rho, ulen):
+        ''' 
+        dimensionalize hydrostatic restoring from WAMIT output to physical units,
+        rho units most match those of self.gravity and length scale should be 
+        equal to 1        
+        '''    
+        HydroRes = self.HydroRes
+        grav =  float( self.gravity )
+        datHR = []
+        
+        for i in HydroRes:
+            datHR.append( np.multiply( np.multiply(i, rho), grav) )  
+
+        return datHR
+        
+    def IntrisicZ(self, bodynum, modenum, rho):
+        '''
+        Calculate intrinsic impedance for a given rigid body mode of a given body
+        over a range of wave frequencies.
+        
+        It uses self variables upon specified body number and mode number.
+        '''        
+        self.AddedMass
+        self.Damping
+        self.HydroRes   # look up the body and mode
+        
+        om = []    # [rad/s]        
+        mass = []    # [kg]
+        HyStR = []    # [kg/s2]
+        
+        om = 2. * np.pi / rwd.waveT
+        mass = float( self.volumesXYZ[bodynum - 1][-1] ) * rho    # neutrally bouyant
+                                                     # taking the z-direction volume
+        # select added mass and damping and dimensionalize them
+        rwd.ReadMode(modenum)    # read heave mode for body one in WAMIT file        
+        AddM, Damp = rwd.Dim0(1000.0, 1.)    # rho in [kg/m3], length scale in [m]   
+        
+        HyStR = rwd.Dim1(1000.0, 1.)    # rho in [kg/m3], length scale in [m]
+                
+        
+        return {'mass':mass, 'addedMass':AddM, 'damping':Damp, 
+                'hydroStaticRes':HyStR}
+        
 if __name__ == '__main__':
 
     rwd = readWamit()     #create class instance and pass WAMIT file name
-    wT1, nms1, dAB1 = rwd.ReadOutFile('./files/opt_x.out')    # read file
-    
-    AdM1, Damp1 = rwd.ReadMode(['3','3'], wT1, nms1, dAB1) 
-
+    rwd.wamOUT = './files/opt_x.out'
+    waveT, nmodes, dat_IJ_AB = rwd.ReadOutFile()    # read file
+   
+    # here select body and mode to get intrinsic impedance from mass, 
+    # damping, added mass and hydrostatic restoring ...
+    d = rwd.IntrisicZ(1, ['3','3'], 1000.)
+   
+   
     # Plot stuff
     plt.figure()
-    plt.plot(wT1, AdM1)
+    plt.plot(rwd.waveT, d['addedMass'])
+##    plt.plot(rwd.waveT, [float(i)*1e-3 for i in AdM1])
+#
+#    plt.xlabel('Wave period (s)')
+#    plt.ylabel('Added mass coefficient [t]')
+#    plt.show()
+#     
+#    plt.figure()
+#    plt.plot(rwd.waveT, [float(i)*1e-3 for i in Damp1])
+#    plt.xlabel('Wave period (s)')
+#    plt.ylabel('Damping coefficient [t/s]')
+#    plt.show()
 
-    plt.xlabel('wave period (s)')
-    plt.title('Non-dimensional added mass coefficients')
-    plt.show()
-     
-    plt.figure()
-    plt.plot(wT1, Damp1)
-    plt.xlabel('wave period (s)')
-    plt.title('Non-dimensional damping coefficients')
-    plt.show()
-
+    
 # TODO:
 # iii) define which modes correspond to which bodies
 # (!) this is not so trivial because for each body, different number of modes can be outputted
