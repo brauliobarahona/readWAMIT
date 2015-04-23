@@ -288,13 +288,14 @@ class readWamit(object):
         HyStR = rwd.Dim1(1000.0, 1.)    # rho in [kg/m3], length scale in [m]
 
         # calculate intrinsic impedande    
-#        intrscZ  = complex( Damp, om * (mass + AddM) - HyStR[2,2] / om );
+        intrscZ  = np.array(Damp) + ( om * ( mass + np.array(AddM) ) - 
+                                    np.array( [ HyStR[bodynum - 1][2, 2] ] ) / om ) * 1j;
 
 # Zmag = abs(Bfloat_33 + ImZ);
 # Zang = angle((Bfloat_33 + ImZ)).*(180/pi);            
         
         return {'mass':mass, 'addedMass':AddM, 'damping':Damp, 
-                'hydroStaticRes':HyStR } #, 'impedance':intrscZ}
+                'hydroStaticRes':HyStR, 'frequency':om, 'impedance':intrscZ}
         
 if __name__ == '__main__':
 
@@ -306,17 +307,27 @@ if __name__ == '__main__':
     # damping, added mass and hydrostatic restoring ...
     d = rwd.IntrisicZ(1, ['3','3'], 1000.)
    
+   
+    # same for other WAMIT outut file
+    rwd = readWamit()     #create class instance and pass WAMIT file name
+    rwd.wamOUT = './files/opt_x.out'
+    waveT1, nmodes1, dat_IJ_AB1 = rwd.ReadOutFile() 
+    d1 = rwd.IntrisicZ(1, ['3','3'], 1000.)
     # Plot stuff
     plt.figure()
-    plt.plot(rwd.waveT, d['addedMass'])
+    plt.plot(d['frequency'], abs( d['impedance']) )
+    plt.plot(d1['frequency'], abs( d1['impedance']) )
 ##    plt.plot(rwd.waveT, [float(i)*1e-3 for i in AdM1])
 #
-#    plt.xlabel('Wave period (s)')
-#    plt.ylabel('Added mass coefficient [t]')
-#    plt.show()
+    plt.xlabel('Wave frequency [rad/s]')
+    plt.ylabel('Amplitude [* Ns/m]')
+    plt.show()
 #     
-#    plt.figure()
-#    plt.plot(rwd.waveT, [float(i)*1e-3 for i in Damp1])
+    plt.figure()
+    plt.plot(d['frequency'], np.angle( d['impedance'], deg = True) )
+    plt.plot(d1['frequency'], np.angle( d1['impedance'], deg = True) )
+    plt.xlabel('Wave frequency [rad/s]')
+    plt.ylabel('Phase [deg]')
 #    plt.xlabel('Wave period (s)')
 #    plt.ylabel('Damping coefficient [t/s]')
 #    plt.show()
