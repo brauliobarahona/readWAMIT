@@ -286,10 +286,15 @@ class readWamit(object):
         AddM, Damp = rwd.Dim0(1000.0, 1.)    # rho in [kg/m3], length scale in [m]   
         
         HyStR = rwd.Dim1(1000.0, 1.)    # rho in [kg/m3], length scale in [m]
-                
+
+        # calculate intrinsic impedande    
+#        intrscZ  = complex( Damp, om * (mass + AddM) - HyStR[2,2] / om );
+
+# Zmag = abs(Bfloat_33 + ImZ);
+# Zang = angle((Bfloat_33 + ImZ)).*(180/pi);            
         
         return {'mass':mass, 'addedMass':AddM, 'damping':Damp, 
-                'hydroStaticRes':HyStR}
+                'hydroStaticRes':HyStR } #, 'impedance':intrscZ}
         
 if __name__ == '__main__':
 
@@ -300,7 +305,6 @@ if __name__ == '__main__':
     # here select body and mode to get intrinsic impedance from mass, 
     # damping, added mass and hydrostatic restoring ...
     d = rwd.IntrisicZ(1, ['3','3'], 1000.)
-   
    
     # Plot stuff
     plt.figure()
